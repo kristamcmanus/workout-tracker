@@ -10,9 +10,9 @@ const Workout = require('../models/workout')
 // to throw a custom error
 const customErrors = require('../../lib/custom_errors')
 
-// we'll use this function to send 404 when non-existant document is requested
+// use this function to send 404 when non-existant document is requested
 const handle404 = customErrors.handle404
-// we'll use this function to send 401 when a user tries to modify a resource
+// use this function to send 401 when a user tries to modify a resource
 // that's owned by someone else
 const requireOwnership = customErrors.requireOwnership
 
@@ -30,114 +30,28 @@ const router = express.Router()
 // // CREATE
 // // POST /workouts
 router.post('/workouts', requireToken, (req, res, next) => {
+  // sets workoutData variable
   const workoutData = req.body.workout
+  // sets owner of bike to current user
   workoutData.owner = req.user.id
   Workout.create(workoutData)
-    // respond to succesful `create` with status 201 and JSON of new "workout"
+    // respond to successful `create` with status 201 and JSON of new "workout"
     .then(workout => res.status(201).json({ workout }))
-    // if an error occurs, pass it off to our error handler
-    // the error handler needs the error message and the `res` object so that it
-    // can send an error message back to the client
     .catch(next)
 })
-
-// CREATE -2
-// POST /workouts
-// router.post('/workouts', requireToken, (req, res, next) => {
-//   // set owner of new workout to be current user
-//   const workoutData = req.body.workout
-//   workoutData.owner = req.user.id
-//
-//   Workout.create(workoutData)
-//     // respond to succesful `create` with status 201 and JSON of new "workout"
-//     .then(workout => {
-//       res.status(201).json({ workout: workout.toObject() })
-//     })
-//     // if an error occurs, pass it off to our error handler
-//     // the error handler needs the error message and the `res` object so that it
-//     // can send an error message back to the client
-//     .catch(next)
-// })
 
 // INDEX
 // GET /workouts
-// router.get('/workouts', requireToken, (req, res, next) => {
-//   // req.body.workout.owner = req.user.id
-//
-//   Workout.find()
-//     .then(workouts => {
-//       // `workouts` will be an array of Mongoose documents
-//       // we want to convert each one to a POJO, so we use `.map` to
-//       // apply `.toObject` to each one
-//       return workouts.map(workout => workout.toObject())
-//     })
-//     // respond with status 200 and JSON of the workouts
-//     .then(workouts => res.status(200).json({ workouts: workouts }))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
-
-// INDEX - 2
-// GET /workouts
 router.get('/workouts', requireToken, (req, res, next) => {
-  // const ownerId = req.user.id
   const owner = req.user
+  // finds all workout `id`s attributed to owner
   Workout.find({ owner: owner.id })
+    // handles errors
     .then(handle404)
     // respond with status 200 and JSON of the workouts
     .then(workouts => res.status(200).json({ workouts }))
-    // if an error occurs, pass it to the handler
     .catch(next)
 })
-
-// INDEX - 3
-// GET /workouts
-//   router.get('/workouts', requireToken, (req, res, next) => {
-//     const userId = req.user.id
-//     Workout.find({ owner: user.id })
-//       .then(workouts => {
-//         return workouts.map(workout => workout.toObject())
-//       })
-//       // respond with status 200 and JSON of the workouts
-//       .then(workouts => res.status(200).json({ workouts }))
-//       // if an error occurs, pass it to the handler
-//       .catch(next)
-// })
-
-// // SHOW (optional feature)
-// // GET /workouts/608079853c6d32c1e46097db
-// router.get('/workouts/:id', requireToken, (req, res, next) => {
-//   // req.params.id will be set based on the `:id` in the route
-//   Workout.findById(req.params.id)
-//     .then(handle404)
-//     // if `findById` is succesful, respond with 200 and "example" JSON
-//     .then(workout => res.status(200).json({ workout: workout.toObject() }))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
-
-// UPDATE
-// PATCH /workouts/608079853c6d32c1e46097db
-// router.patch('/workouts/:id', requireToken, removeBlanks, (req, res, next) => {
-//   // if the client attempts to change the `owner` property by including a new
-//   // owner, prevent that by deleting that key/value pair
-//   delete req.body.workout.owner
-//
-//   Workout.findById(req.params.id)
-//     .then(handle404)
-//     .then(workout => {
-//       // pass the `req` object and the Mongoose record to `requireOwnership`
-//       // it will throw an error if the current user isn't the owner
-//       requireOwnership(req, workout)
-//
-//       // pass the result of Mongoose's `.update` to the next `.then`
-//       return workout.updateOne(req.body.workout)
-//     })
-//     // if that succeeded, return 204 and no JSON
-//     .then(() => res.sendStatus(204))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
 
 // UPDATE
 // PATCH /workouts/5a7db6c74d55bc51bdf39793
@@ -145,108 +59,27 @@ router.patch('/workouts/:id', requireToken, removeBlanks, (req, res, next) => {
   // if the client attempts to change the `owner` property by including a new
   // owner, prevent that by deleting that key/value pair
   delete req.body.workout.owner
-
+  // finds individual workout to update by `id`
   Workout.findById(req.params.id)
+    // handles errors
     .then(handle404)
     .then(workout => {
       // pass the `req` object and the Mongoose record to `requireOwnership`
       // it will throw an error if the current user isn't the owner
       requireOwnership(req, workout)
-      // pass the result of Mongoose's `.update` to the next `.then`
       return workout.updateOne(req.body.workout)
     })
     // if that succeeded, return 204 and no JSON
     .then(() => res.sendStatus(204))
-    // if an error occurs, pass it to the handler
     .catch(next)
 })
 
-// UPDATE - 3
-// PATCH /workouts/5a7db6c74d55bc51bdf39793
-// router.patch('/workouts/:id', requireToken, removeBlanks, (req, res, next) => {
-//   // if the client attempts to change the `owner` property by including a new
-//   // owner, prevent that by deleting that key/value pair
-//   const workoutId = req.params.id
-//   const workoutData = req.body.workout
-//   const userId = req.user.id
-//   delete workoutData.owner
-//   Workout.findById(workoutId)
-//     .then(handle404)
-//     .then(workout => {
-//       // pass the `req` object and the Mongoose record to `requireOwnership`
-//       // it will throw an error if the current user isn't the owner
-//       requireOwnership(req, workout)
-//       // pass the result of Mongoose's `.update` to the next `.then`
-//       return workout.updateOne(workoutData)
-//     })
-//     // if that succeeded, return 204 and no JSON
-//     .then(() => res.sendStatus(204))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
-
-// UPDATE - 2
-// PATCH /workouts/5a7db6c74d55bc51bdf39793
-// router.patch('/workouts/:id', requireToken, removeBlanks, (req, res, next) => {
-//   // if the client attempts to change the `owner` property by including a new
-//   // owner, prevent that by deleting that key/value pair
-//   const owner = req.user
-//   const workoutId = req.params.id
-//   const workoutData = req.body.workout
-//   Workout.findById(workoutId)
-//     .then(handle404)
-//     .then(workout => {
-//       if (workout.owner !== owner._id) {
-//         throw new Error ('Credentials invalid')
-//       }
-//     })
-//     .then(workout => {
-//       workout.set(workoutData)
-//       return workout.save()
-//     })
-//     .then(workout => res.status(200).json({ workout }))
-// })
-
-// // // DESTROY
-// // // DELETE /examples/5a7db6c74d55bc51bdf39793
-// router.delete('/workouts/:id', requireToken, (req, res, next) => {
-//   const workoutId = req.params.id
-//   Workout.findById(workoutId)
-//     .then(handle404)
-//     .then(workout => {
-//       // throw an error if current user doesn't own `workout`
-//       requireOwnership(req, workout)
-//       // delete the example ONLY IF the above didn't throw
-//       workout.deleteOne()
-//     })
-//     // send back 204 and no content if the deletion succeeded
-//     .then(() => res.sendStatus(204))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
-
-// // DESTROY -2
-// // DELETE /examples/5a7db6c74d55bc51bdf39793
-// router.delete('/workouts/:id', requireToken, (req, res, next) => {
-//   const workoutId = req.params.id
-//   Workout.findById(workoutId)
-//     .then(handle404)
-//     .then(workout => {
-//       // throw an error if current user doesn't own `workout`
-//       requireOwnership(req, workout)
-//       // delete the workout ONLY IF the above didn't throw
-//       workout.deleteOne()
-//     })
-//     // send back 204 and no content if the deletion succeeded
-//     .then(() => res.sendStatus(204))
-//     // if an error occurs, pass it to the handler
-//     .catch(next)
-// })
-
-// // DESTROY -3
-// // DELETE /examples/5a7db6c74d55bc51bdf39793
+// DESTROY
+// DELETE /examples/5a7db6c74d55bc51bdf39793
 router.delete('/workouts/:id', requireToken, (req, res, next) => {
+  // find individual workout to delete by `id`
   Workout.findById(req.params.id)
+    // handles errors
     .then(handle404)
     .then(workout => {
       // throw an error if current user doesn't own `workout`
@@ -256,7 +89,6 @@ router.delete('/workouts/:id', requireToken, (req, res, next) => {
     })
     // send back 204 and no content if the deletion succeeded
     .then(() => res.sendStatus(204))
-    // if an error occurs, pass it to the handler
     .catch(next)
 })
 
